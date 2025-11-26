@@ -7,9 +7,9 @@
  */
 
 import React from "react";
-import { Modal, Form, Input, message } from "antd";
-import { useCreate, useInvalidate } from "@refinedev/core";
-import type { IStyle } from "../../types/models";
+import { Modal, Form, Input, Select, message } from "antd";
+import { useCreate, useInvalidate, useList } from "@refinedev/core";
+import type { IStyle, ICustomer } from "../../types/models";
 import dayjs from "dayjs";
 
 interface CreateStyleModalProps {
@@ -29,6 +29,14 @@ export const CreateStyleModal: React.FC<CreateStyleModalProps> = ({
   // 用于刷新数据的钩子
   const invalidate = useInvalidate();
 
+  // 加载客户列表
+  const { data: customersData } = useList<ICustomer>({
+    resource: "customers",
+    pagination: {
+      pageSize: 1000, // 加载所有客户
+    },
+  });
+
   /**
    * 处理表单提交
    */
@@ -36,10 +44,17 @@ export const CreateStyleModal: React.FC<CreateStyleModalProps> = ({
     form
       .validateFields()
       .then((values) => {
+        // 查找选中的客户名称
+        const selectedCustomer = customersData?.data?.find(
+          (c) => c.id === values.customer_id
+        );
+
         // 构造款号数据（创建日期自动生成）
         const newStyle: Omit<IStyle, "id"> = {
           style_no: values.style_no,
           style_name: values.style_name,
+          customer_id: values.customer_id,
+          customer_name: selectedCustomer?.customer_name,
           create_date: dayjs().format("YYYY-MM-DD"), // 当前日期
           public_note: values.public_note || "",
         };
@@ -122,6 +137,25 @@ export const CreateStyleModal: React.FC<CreateStyleModalProps> = ({
           layout="vertical"
           autoComplete="off"
         >
+          {/* 关联客户字段（必填）*/}
+          <Form.Item
+            label="关联客户"
+            name="customer_id"
+            rules={[{ required: true, message: "请选择关联客户" }]}
+            tooltip="选择该款号所属的客户"
+          >
+            <Select
+              placeholder="请选择客户"
+              size="large"
+              showSearch
+              optionFilterProp="label"
+              options={customersData?.data?.map((customer) => ({
+                label: customer.customer_name,
+                value: customer.id,
+              }))}
+            />
+          </Form.Item>
+
           {/* 款号字段（必填）*/}
           <Form.Item
             label="款号"

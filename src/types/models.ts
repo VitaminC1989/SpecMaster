@@ -73,6 +73,8 @@ export interface IStyle {
   id: number;               // 款号ID
   style_no: string;         // 款号（唯一索引，如：9128）
   style_name?: string;      // 款式名称（如：儿童拼色马甲）
+  customer_id?: number;     // 关联的客户ID（外键）
+  customer_name?: string;   // 客户名称（冗余字段，方便显示）
   create_date: string;      // 创建日期（ISO 8601格式）
   public_note?: string;     // 公共备注（所有颜色共用的备注信息）
 }

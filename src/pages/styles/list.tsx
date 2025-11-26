@@ -116,6 +116,15 @@ export const StyleList: React.FC = () => {
             ),
           },
           {
+            title: "客户名称",
+            dataIndex: "customer_name",
+            key: "customer_name",
+            width: 150,
+            render: (text) => (
+              <span className="text-gray-700">{text || "-"}</span>
+            ),
+          },
+          {
             title: "创建日期",
             dataIndex: "create_date",
             key: "create_date",
