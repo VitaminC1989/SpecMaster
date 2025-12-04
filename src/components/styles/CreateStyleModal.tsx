@@ -76,7 +76,7 @@ export const CreateStyleModal: React.FC<CreateStyleModalProps> = ({
             },
           },
           {
-            onSuccess: (data) => {
+            onSuccess: (_data) => {
               // 刷新款号列表
               invalidate({
                 resource: "styles",

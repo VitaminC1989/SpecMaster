@@ -162,7 +162,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({ variantId }) => {
               editable: false,
               render: (url) => (
                 <Image
-                  src={url}
+                  src={url as string | undefined}
                   width={60}
                   height={60}
                   style={{ objectFit: "cover", borderRadius: 4 }}
@@ -276,7 +276,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({ variantId }) => {
           editable={{
             type: "multiple",
             onSave: async (key, record) => {
-              await handleSave(key, record as IBOMItem);
+              await handleSave(key as React.Key, record as IBOMItem);
             },
           }}
           pagination={false}
