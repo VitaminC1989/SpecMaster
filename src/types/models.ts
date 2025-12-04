@@ -148,3 +148,47 @@ export interface IUnit {
   is_active: boolean;       // 是否启用
 }
 
+// ==========================================
+// 下单模块：订单计算相关
+// ==========================================
+/**
+ * 下单尺码配置
+ * 每个尺码的下单数量
+ */
+export interface ISizeOrderQty {
+  size: string;             // 尺码（如：S, M, L, XL）
+  quantity: number;         // 下单数量
+}
+
+/**
+ * 下单配置接口
+ */
+export interface IOrderConfig {
+  styleId: number;          // 款号ID
+  variantId: number;        // 颜色版本ID
+  baseSpecField: 'size' | 'spec_value';  // 基准字段（以尺码或规格值为基准）
+  sizeOrders: ISizeOrderQty[];  // 各尺码下单数量
+}
+
+/**
+ * 配料计算结果行
+ */
+export interface IOrderMaterialRow {
+  materialName: string;           // 辅料名称
+  materialImageUrl: string;       // 辅料图片
+  materialColor: string;          // 辅料颜色
+  materialColorImageUrl?: string; // 辅料颜色图片
+  unit: string;                   // 单位
+  usage: number;                  // 单耗
+  supplier?: string;              // 供应商
+  specDetails: ISpecDetail[];     // 规格明细
+  sizeCalculations: {             // 各尺码计算结果
+    size: string;
+    specValue: string | number;   // 规格值
+    specUnit: string;             // 规格单位
+    orderQty: number;             // 下单数量（件数）
+    materialQty: number;          // 配料需求量 = 单耗 × 下单数量
+  }[];
+  totalMaterialQty: number;       // 配料总需求量
+}
+

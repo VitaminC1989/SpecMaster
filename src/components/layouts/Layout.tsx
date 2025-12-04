@@ -5,6 +5,7 @@
 
 import { Layout as AntLayout, Menu } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { DataBackup } from "../common/DataBackup";
 
 const { Header, Content } = AntLayout;
 
@@ -44,7 +45,7 @@ export const Layout: React.FC = () => {
       <Header className="bg-white shadow-sm border-b border-gray-200">
         <div className="flex items-center justify-between h-full px-6">
           <div className="flex items-center gap-8">
-            <div 
+            <div
               className="flex items-center gap-3 cursor-pointer"
               onClick={() => navigate("/styles")}
             >
@@ -53,7 +54,7 @@ export const Layout: React.FC = () => {
                 SpecMaster
               </h1>
             </div>
-            
+
             {/* 导航菜单 */}
             <Menu
               mode="horizontal"
@@ -63,10 +64,10 @@ export const Layout: React.FC = () => {
               style={{ border: 'none', background: 'transparent', minWidth: 500 }}
             />
           </div>
-          
-          {/* 右侧可扩展区域（可添加用户菜单、设置等）*/}
+
+          {/* 右侧：数据管理 */}
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">Demo 模式</span>
+            <DataBackup />
           </div>
         </div>
       </Header>

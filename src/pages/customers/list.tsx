@@ -7,13 +7,15 @@ import React, { useState } from "react";
 import { useTable, useModalForm } from "@refinedev/antd";
 import { ProTable } from "@ant-design/pro-components";
 import { Button, Modal, Form, Input, message, Space } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useDelete } from "@refinedev/core";
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { useDelete, useCreate, useInvalidate } from "@refinedev/core";
+import { useNavigate } from "react-router-dom";
 import type { ICustomer } from "../../types/models";
 import dayjs from "dayjs";
 
 export const CustomerList: React.FC = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
   
   // 表格数据
   const { tableProps } = useTable<ICustomer>({
@@ -78,7 +80,14 @@ export const CustomerList: React.FC = () => {
             title: "客户名称",
             dataIndex: "customer_name",
             width: 250,
-            render: (text) => <span className="font-medium">{text}</span>,
+            render: (text, record) => (
+              <a
+                className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
+                onClick={() => navigate(`/customers/${record.id}`)}
+              >
+                {text}
+              </a>
+            ),
           },
           {
             title: "联系人",
@@ -107,10 +116,17 @@ export const CustomerList: React.FC = () => {
           },
           {
             title: "操作",
-            width: 150,
+            width: 200,
             fixed: "right",
             render: (_, record) => (
               <Space>
+                <Button
+                  type="link"
+                  icon={<EyeOutlined />}
+                  onClick={() => navigate(`/customers/${record.id}`)}
+                >
+                  查看
+                </Button>
                 <Button
                   type="link"
                   icon={<EditOutlined />}
@@ -185,11 +201,8 @@ const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
   onClose,
 }) => {
   const [form] = Form.useForm();
-  const { mutate: createCustomer, isLoading } = useModalForm<ICustomer>({
-    resource: "customers",
-    action: "create",
-    redirect: false,
-  }).formProps.onFinish as any;
+  const { mutate: createCustomer, isLoading } = useCreate<ICustomer>();
+  const invalidate = useInvalidate();
 
   const handleSubmit = () => {
     form.validateFields().then((values) => {
@@ -197,7 +210,7 @@ const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
         ...values,
         create_date: dayjs().format("YYYY-MM-DD"),
       };
-      
+
       createCustomer(
         { resource: "customers", values: newCustomer },
         {
@@ -205,6 +218,10 @@ const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
             message.success("创建成功");
             form.resetFields();
             onClose();
+            invalidate({
+              resource: "customers",
+              invalidates: ["list"],
+            });
           },
         }
       );

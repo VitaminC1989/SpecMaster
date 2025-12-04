@@ -14,6 +14,8 @@ export const mockStyles: IStyle[] = [
     id: 1,
     style_no: '9128',
     style_name: '儿童拼色马甲',
+    customer_id: 1,
+    customer_name: '优衣库（中国）有限公司',
     create_date: '2023-11-25',
     public_note: '注意面料色差，拉链需采用YKK品牌，四合扣需使用铜质材料'
   },
@@ -21,6 +23,8 @@ export const mockStyles: IStyle[] = [
     id: 2,
     style_no: '9129',
     style_name: '成人休闲夹克',
+    customer_id: 2,
+    customer_name: 'ZARA 贸易（上海）有限公司',
     create_date: '2023-11-26',
     public_note: '防水面料，所有拉链必须带防水涂层'
   },
@@ -28,6 +32,8 @@ export const mockStyles: IStyle[] = [
     id: 3,
     style_no: '9130',
     style_name: '女士连帽卫衣',
+    customer_id: 1,
+    customer_name: '优衣库（中国）有限公司',
     create_date: '2023-11-27',
     public_note: '抽绳需双层加固'
   },
@@ -35,6 +41,8 @@ export const mockStyles: IStyle[] = [
     id: 4,
     style_no: '9131',
     style_name: '男士商务衬衫',
+    customer_id: 3,
+    customer_name: 'H&M 服饰（中国）有限公司',
     create_date: '2023-11-28',
     public_note: '纽扣需统一使用贝壳扣'
   },
@@ -42,6 +50,8 @@ export const mockStyles: IStyle[] = [
     id: 5,
     style_no: '9132',
     style_name: '儿童运动裤',
+    customer_id: 4,
+    customer_name: '海澜之家股份有限公司',
     create_date: '2023-11-29',
     public_note: '松紧带需测试拉伸300次以上'
   }

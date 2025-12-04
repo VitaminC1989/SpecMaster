@@ -6,7 +6,6 @@
 import React, { useState } from "react";
 import { Input, Upload, Image, Space, Button, Popover } from "antd";
 import { PictureOutlined, DeleteOutlined } from "@ant-design/icons";
-import type { UploadFile } from "antd";
 
 interface MaterialColorEditorProps {
   value?: {
