@@ -2,7 +2,7 @@
  * 新建颜色版本弹窗组件
  * 功能：
  * 1. 收集颜色版本基础信息（颜色名称、尺码范围）
- * 2. 支持上传样衣图片（Demo 模式使用占位图）
+ * 2. 支持上传样衣图片到七牛云 OSS
  * 3. 创建后自动关联到当前款号
  */
 
@@ -11,6 +11,7 @@ import { Modal, Form, Input, message, Upload } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useCreate, useInvalidate } from "@refinedev/core";
 import type { IColorVariant } from "../../types/models";
+import { uploadToQiniu } from "../../utils/qiniuUpload";
 
 interface CreateVariantModalProps {
   open: boolean;
@@ -33,18 +34,28 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
   const invalidate = useInvalidate();
 
   /**
-   * 处理图片上传（Demo 模式：使用 base64 或默认占位图）
+   * 处理图片上传（使用七牛云）
    */
-  const handleImageChange = (info: any) => {
+  const handleImageChange = async (info: any) => {
     const file = info.file.originFileObj || info.file;
-    
-    if (file) {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        setImageUrl(reader.result as string);
-        message.success("图片上传成功");
-      };
+
+    if (file && !imageUrl) { // 防止重复上传
+      try {
+        // 上传到七牛云
+        const url = await uploadToQiniu({
+          file,
+          prefix: "samples", // 样衣图片前缀
+          onProgress: (percent) => {
+            console.log(`样衣图片上传进度: ${percent}%`);
+          },
+        });
+
+        setImageUrl(url);
+        message.success("样衣图片上传成功");
+      } catch (error) {
+        console.error("样衣图片上传失败:", error);
+        message.error("样衣图片上传失败，请重试");
+      }
     }
   };
 
@@ -170,15 +181,15 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
             />
           </Form.Item>
 
-          {/* 样衣图片上传（可选）*/}
+          {/* 样衣图片上传 */}
           <Form.Item
             label="样衣图片"
-            tooltip="Demo 模式下会使用默认占位图，生产环境支持真实上传"
+            tooltip="上传到七牛云存储，支持 CDN 加速访问"
           >
             <Upload
               listType="picture-card"
               maxCount={1}
-              beforeUpload={() => false} // 阻止默认上传，使用本地 base64
+              beforeUpload={() => false} // 阻止默认上传，使用自定义上传
               onChange={handleImageChange}
               showUploadList={true}
             >
@@ -192,7 +203,7 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
             <div className="text-sm text-gray-500 mt-2">
               建议尺寸：400x600 像素，支持 JPG、PNG 格式
               <br />
-              Demo 模式：如不上传将使用默认占位图
+              图片将上传到七牛云，自动获得 CDN 加速访问
             </div>
           </Form.Item>
         </Form>

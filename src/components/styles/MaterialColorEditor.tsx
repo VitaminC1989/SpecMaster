@@ -4,8 +4,9 @@
  */
 
 import React, { useState } from "react";
-import { Input, Upload, Image, Space, Button, Popover } from "antd";
+import { Input, Upload, Image, Space, Button, Popover, message } from "antd";
 import { PictureOutlined, DeleteOutlined } from "@ant-design/icons";
+import { uploadToQiniu } from "../../utils/qiniuUpload";
 
 interface MaterialColorEditorProps {
   value?: {
@@ -32,16 +33,27 @@ export const MaterialColorEditor: React.FC<MaterialColorEditorProps> = ({
   };
 
   /**
-   * 处理图片上传
+   * 处理图片上传（使用七牛云）
    */
-  const handleImageUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      const newImageUrl = reader.result as string;
+  const handleImageUpload = async (file: File) => {
+    try {
+      // 上传到七牛云
+      const newImageUrl = await uploadToQiniu({
+        file,
+        prefix: "colors", // 色卡图片前缀
+        onProgress: (percent) => {
+          console.log(`色卡上传进度: ${percent}%`);
+        },
+      });
+
       setImageUrl(newImageUrl);
       onChange?.({ text, imageUrl: newImageUrl });
-    };
+      message.success("色卡上传成功");
+    } catch (error) {
+      console.error("色卡上传失败:", error);
+      message.error("色卡上传失败，请重试");
+    }
+
     return false; // 阻止默认上传
   };
 
