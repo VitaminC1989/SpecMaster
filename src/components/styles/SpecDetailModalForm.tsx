@@ -43,11 +43,18 @@ export const SpecDetailModalForm: React.FC<SpecDetailModalFormProps> = ({
 
   /**
    * 当弹窗打开或 bomItem 变化时，初始化表单数据
+   * 确保每个规格都有唯一的 id，避免 key 冲突
    */
   useEffect(() => {
     if (open && bomItem) {
+      // 确保每个规格都有唯一的 id
+      const specDetailsWithId = (bomItem.specDetails || []).map((spec, index) => ({
+        ...spec,
+        id: spec.id || Date.now() + index * 1000 + Math.random(),
+      }));
+
       form.setFieldsValue({
-        specDetails: bomItem.specDetails || [],
+        specDetails: specDetailsWithId,
       });
     }
   }, [open, bomItem, form]);
@@ -62,10 +69,12 @@ export const SpecDetailModalForm: React.FC<SpecDetailModalFormProps> = ({
       .then((values) => {
         const updatedSpecDetails: ISpecDetail[] = values.specDetails || [];
 
-        // 为新增的规格生成临时 ID
+        // 为新增的规格生成唯一 ID
+        // 使用基础时间戳 + 毫秒数偏移，确保每条记录ID唯一
+        const baseTimestamp = Date.now();
         const specDetailsWithId = updatedSpecDetails.map((spec, index) => ({
           ...spec,
-          id: spec.id || Date.now() + index,
+          id: spec.id || baseTimestamp + index * 1000, // 每条记录间隔1000毫秒
         }));
 
         // 调用更新 API
@@ -90,7 +99,7 @@ export const SpecDetailModalForm: React.FC<SpecDetailModalFormProps> = ({
                 resource: "bom_items",
                 invalidates: ["list"],
               });
-              
+
               // 关闭弹窗
               handleClose();
             },
@@ -172,7 +181,6 @@ export const SpecDetailModalForm: React.FC<SpecDetailModalFormProps> = ({
                     <Space size="middle" align="start" className="w-full">
                       {/* 尺码字段（可选）*/}
                       <Form.Item
-                        {...field}
                         name={[field.name, "size"]}
                         label="尺码"
                         style={{ marginBottom: 0, width: 140 }}
@@ -186,7 +194,6 @@ export const SpecDetailModalForm: React.FC<SpecDetailModalFormProps> = ({
 
                       {/* 规格值字段（必填）*/}
                       <Form.Item
-                        {...field}
                         name={[field.name, "spec_value"]}
                         label="规格值"
                         rules={[{ required: true, message: "请输入规格值" }]}
@@ -202,7 +209,6 @@ export const SpecDetailModalForm: React.FC<SpecDetailModalFormProps> = ({
 
                       {/* 规格单位字段（必填）*/}
                       <Form.Item
-                        {...field}
                         name={[field.name, "spec_unit"]}
                         label="规格单位"
                         rules={[{ required: true, message: "请输入单位" }]}
@@ -219,7 +225,11 @@ export const SpecDetailModalForm: React.FC<SpecDetailModalFormProps> = ({
               {/* 添加规格按钮 */}
               <Button
                 type="dashed"
-                onClick={() => add()}
+                onClick={() => add({
+                  size: "",
+                  spec_value: undefined,
+                  spec_unit: "",
+                })}
                 block
                 icon={<PlusOutlined />}
                 size="large"

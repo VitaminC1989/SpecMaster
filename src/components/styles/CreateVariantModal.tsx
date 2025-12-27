@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from "react";
-import { Modal, Form, Input, message, Upload } from "antd";
+import { Modal, Form, Input, message, Upload, Image } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useCreate, useInvalidate } from "@refinedev/core";
 import type { IColorVariant } from "../../types/models";
@@ -26,6 +26,7 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [imageUrl, setImageUrl] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
 
   // 用于创建颜色版本的 Hook
   const { mutate: createVariant, isLoading } = useCreate();
@@ -37,10 +38,19 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
    * 处理图片上传（使用七牛云）
    */
   const handleImageChange = async (info: any) => {
+    // 只处理新选择的文件，避免重复上传
+    if (info.file.status === 'removed') {
+      setImageUrl("");
+      setUploading(false);
+      return;
+    }
+
     const file = info.file.originFileObj || info.file;
 
-    if (file && !imageUrl) { // 防止重复上传
+    // 确保是真实的文件对象，且没有正在上传
+    if (file && file instanceof File) {
       try {
+        setUploading(true);
         // 上传到七牛云
         const url = await uploadToQiniu({
           file,
@@ -51,10 +61,12 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
         });
 
         setImageUrl(url);
+        setUploading(false);
         message.success("样衣图片上传成功");
       } catch (error) {
         console.error("样衣图片上传失败:", error);
         message.error("样衣图片上传失败，请重试");
+        setUploading(false);
       }
     }
   };
@@ -71,8 +83,8 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
           style_id: styleId,
           color_name: values.color_name,
           size_range: values.size_range || "",
-          // 如果有上传图片使用上传的，否则使用默认占位图
-          sample_image_url: imageUrl || `https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&h=600&fit=crop`,
+          // 使用上传的图片，如果没有则为空（不使用默认图）
+          sample_image_url: imageUrl || "",
         };
 
         // 调用创建 API
@@ -121,6 +133,7 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
   const handleClose = () => {
     form.resetFields();
     setImageUrl("");
+    setUploading(false);
     onClose();
   };
 
@@ -191,15 +204,32 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
               maxCount={1}
               beforeUpload={() => false} // 阻止默认上传，使用自定义上传
               onChange={handleImageChange}
-              showUploadList={true}
+              showUploadList={false} // 隐藏默认的文件列表，使用自定义显示
             >
-              {!imageUrl && (
+              {imageUrl ? (
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <Image
+                    src={imageUrl}
+                    width={100}
+                    height={100}
+                    style={{ objectFit: 'cover' }}
+                    preview={true}
+                  />
+                </div>
+              ) : (
                 <div>
                   <PlusOutlined />
-                  <div style={{ marginTop: 8 }}>上传图片</div>
+                  <div style={{ marginTop: 8 }}>
+                    {uploading ? "上传中..." : "上传图片"}
+                  </div>
                 </div>
               )}
             </Upload>
+            {imageUrl && (
+              <div className="text-xs text-gray-500 mt-1">
+                ✓ 图片已上传到七牛云
+              </div>
+            )}
             <div className="text-sm text-gray-500 mt-2">
               建议尺寸：400x600 像素，支持 JPG、PNG 格式
               <br />
