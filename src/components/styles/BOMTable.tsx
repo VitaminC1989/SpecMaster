@@ -10,16 +10,95 @@
 
 import React, { useState } from "react";
 import { EditableProTable } from "@ant-design/pro-components";
-import { Image, Button, Tag } from "antd";
-import { EditOutlined } from "@ant-design/icons";
-import { useList, useUpdate, useDelete } from "@refinedev/core";
+import { Image, Button, Tag, Upload, message } from "antd";
+import { EditOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useList, useCreate, useUpdate, useDelete } from "@refinedev/core";
 import type { IBOMItem, ISpecDetail } from "../../types/models";
 import { SpecDetailModalForm } from "./SpecDetailModalForm";
 import { MaterialColorEditor, MaterialColorDisplay } from "./MaterialColorEditor";
+import { uploadToQiniu } from "../../utils/qiniuUpload";
 
 interface BOMTableProps {
   variantId: number;
 }
+
+/**
+ * 辅料图片上传组件
+ */
+interface MaterialImageUploaderProps {
+  value?: string;
+  onChange?: (url: string) => void;
+}
+
+const MaterialImageUploader: React.FC<MaterialImageUploaderProps> = ({ value, onChange }) => {
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (file: File) => {
+    try {
+      setUploading(true);
+      const url = await uploadToQiniu({
+        file,
+        prefix: "materials", // 辅料图片前缀
+        onProgress: (percent) => {
+          console.log(`辅料图片上传进度: ${percent}%`);
+        },
+      });
+
+      onChange?.(url);
+      message.success("辅料图片上传成功");
+    } catch (error) {
+      console.error("辅料图片上传失败:", error);
+      message.error("辅料图片上传失败");
+    } finally {
+      setUploading(false);
+    }
+    return false; // 阻止默认上传
+  };
+
+  return (
+    <div className="relative inline-block">
+      <Upload
+        listType="picture-card"
+        showUploadList={false}
+        beforeUpload={handleUpload}
+        accept="image/*"
+        disabled={uploading}
+      >
+        {value ? (
+          <Image
+            src={value}
+            width={100}
+            height={100}
+            style={{ objectFit: "cover" }}
+            preview={false}
+          />
+        ) : (
+          <div>
+            <PlusOutlined />
+            <div style={{ marginTop: 8 }}>
+              {uploading ? "上传中..." : "上传图片"}
+            </div>
+          </div>
+        )}
+      </Upload>
+      {value && (
+        <Button
+          type="primary"
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange?.("");
+            message.success("图片已移除");
+          }}
+          className="absolute -top-2 -right-2 z-10"
+          style={{ minWidth: 24, padding: "0 4px" }}
+        />
+      )}
+    </div>
+  );
+};
 
 export const BOMTable: React.FC<BOMTableProps> = ({ variantId }) => {
   // 当前正在编辑规格的配料记录
@@ -34,6 +113,9 @@ export const BOMTable: React.FC<BOMTableProps> = ({ variantId }) => {
 
   const dataSource = bomData?.data || [];
 
+  // 创建配料的 Hook
+  const { mutate: createBomItem } = useCreate();
+
   // 更新配料的 Hook
   const { mutate: updateBomItem } = useUpdate();
 
@@ -42,10 +124,15 @@ export const BOMTable: React.FC<BOMTableProps> = ({ variantId }) => {
 
   /**
    * 处理行内编辑保存
+   * 智能判断：新记录调用 CREATE，已存在记录调用 UPDATE
    */
   const handleSave = async (_key: React.Key, record: IBOMItem) => {
-    updateBomItem(
-      {
+    // 检查记录是否已存在于数据库中
+    const existingRecord = dataSource.find((item) => item.id === record.id);
+
+    if (existingRecord) {
+      // 已存在 -> 更新
+      updateBomItem({
         resource: "bom_items",
         id: record.id,
         values: record,
@@ -53,8 +140,21 @@ export const BOMTable: React.FC<BOMTableProps> = ({ variantId }) => {
           message: "保存成功",
           type: "success",
         },
-      }
-    );
+      });
+    } else {
+      // 不存在 -> 创建新记录
+      createBomItem({
+        resource: "bom_items",
+        values: {
+          ...record,
+          variant_id: variantId, // 确保关联正确的颜色版本
+        },
+        successNotification: {
+          message: "添加成功",
+          type: "success",
+        },
+      });
+    }
   };
 
   /**
@@ -158,25 +258,46 @@ export const BOMTable: React.FC<BOMTableProps> = ({ variantId }) => {
             {
               title: "辅料图片",
               dataIndex: "material_image_url",
-              width: 100,
-              editable: false,
-              render: (url) => (
-                <Image
-                  src={url as string | undefined}
-                  width={60}
-                  height={60}
-                  style={{ objectFit: "cover", borderRadius: 4 }}
-                  placeholder={
-                    <div className="w-[60px] h-[60px] bg-gray-100 rounded flex items-center justify-center">
-                      图片
+              width: 120,
+              render: (url) => {
+                if (!url) {
+                  return (
+                    <div className="w-[60px] h-[60px] bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
+                      无图片
                     </div>
-                  }
-                />
-              ),
+                  );
+                }
+                return (
+                  <Image
+                    src={url as string}
+                    width={60}
+                    height={60}
+                    style={{ objectFit: "cover", borderRadius: 4 }}
+                  />
+                );
+              },
+              renderFormItem: (_, { record, recordKey }, form) => {
+                return (
+                  <MaterialImageUploader
+                    value={record?.material_image_url}
+                    onChange={(url) => {
+                      if (record && recordKey !== undefined) {
+                        record.material_image_url = url;
+                        form?.setFieldsValue({
+                          [recordKey as string]: {
+                            ...record,
+                            material_image_url: url,
+                          },
+                        });
+                      }
+                    }}
+                  />
+                );
+              },
             },
             {
               title: "辅料颜色",
-              dataIndex: "material_color",
+              dataIndex: "material_color_text", // 使用真实字段名
               width: 250,
               render: (_, record) => (
                 <MaterialColorDisplay
@@ -184,21 +305,38 @@ export const BOMTable: React.FC<BOMTableProps> = ({ variantId }) => {
                   imageUrl={record.material_color_image_url}
                 />
               ),
-              renderFormItem: (_, { record }) => (
-                <MaterialColorEditor
-                  value={{
-                    text: record?.material_color_text,
-                    imageUrl: record?.material_color_image_url,
-                  }}
-                  onChange={(value) => {
-                    // 更新记录中的两个字段
-                    if (record) {
-                      record.material_color_text = value.text;
-                      record.material_color_image_url = value.imageUrl;
-                    }
-                  }}
-                />
-              ),
+              renderFormItem: (_, { record, recordKey }, form) => {
+                return (
+                  <MaterialColorEditor
+                    value={{
+                      text: record?.material_color_text,
+                      imageUrl: record?.material_color_image_url,
+                    }}
+                    onChange={(value) => {
+                      // 使用表单实例更新值（确保被追踪）
+                      if (record && recordKey !== undefined) {
+                        record.material_color_text = value.text;
+                        record.material_color_image_url = value.imageUrl;
+                        // 触发表单值变化
+                        form?.setFieldsValue({
+                          [recordKey as string]: {
+                            ...record,
+                            material_color_text: value.text,
+                            material_color_image_url: value.imageUrl,
+                          },
+                        });
+                      }
+                    }}
+                  />
+                );
+              },
+            },
+            // 隐藏字段：辅料颜色图片URL（用于保存数据）
+            {
+              title: "色卡图片",
+              dataIndex: "material_color_image_url",
+              hideInTable: true, // 表格中隐藏
+              editable: false,   // 不可编辑（通过上面的颜色列编辑）
             },
             {
               title: "单耗",
@@ -266,8 +404,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({ variantId }) => {
               id: Date.now(), // 临时ID
               variant_id: variantId,
               material_name: "",
-              material_image_url:
-                "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=150&h=150&fit=crop",
+              material_image_url: "", // 让用户自己上传
               usage: 1,
               unit: "条",
               specDetails: [],
