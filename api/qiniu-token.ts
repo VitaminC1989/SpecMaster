@@ -7,6 +7,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createHmac } from 'crypto';
 
 // 从环境变量读取七牛密钥（需在 Vercel 控制台配置）
 const QINIU_ACCESS_KEY = process.env.QINIU_ACCESS_KEY || '';
@@ -17,8 +18,7 @@ const QINIU_BUCKET = process.env.QINIU_BUCKET || '';
  * HMAC-SHA1 签名（Node.js 内置实现）
  */
 function hmacSha1(secretKey: string, data: string): string {
-  const crypto = require('crypto');
-  const hmac = crypto.createHmac('sha1', secretKey);
+  const hmac = createHmac('sha1', secretKey);
   hmac.update(data);
   return hmac.digest('base64');
 }
