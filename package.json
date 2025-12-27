@@ -5,6 +5,7 @@
   "description": "服装配方管理系统前端 Demo",
   "scripts": {
     "dev": "vite",
+    "dev:token": "node scripts/local-qiniu-server.js",
     "build": "vite build",
     "build:check": "tsc && vite build",
     "preview": "vite preview",
@@ -36,10 +37,12 @@
     "@vercel/node": "^5.5.16",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
+    "dotenv": "^17.2.3",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "postcss": "^8.4.32",
+    "qiniu": "^7.14.0",
     "tailwindcss": "^3.3.6",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"

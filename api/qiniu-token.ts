@@ -1,5 +1,6 @@
 /**
  * Serverless 函数：生成七牛上传凭证
+ * 使用七牛官方 Node.js SDK
  * 部署到 Vercel/Netlify 后自动生成 API 端点
  *
  * 本地测试：npm install -g vercel && vercel dev
@@ -7,7 +8,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createHmac } from 'crypto';
+import * as qiniu from 'qiniu';
 
 // 从环境变量读取七牛密钥（需在 Vercel 控制台配置）
 const QINIU_ACCESS_KEY = process.env.QINIU_ACCESS_KEY || '';
@@ -15,44 +16,19 @@ const QINIU_SECRET_KEY = process.env.QINIU_SECRET_KEY || '';
 const QINIU_BUCKET = process.env.QINIU_BUCKET || '';
 
 /**
- * HMAC-SHA1 签名（Node.js 内置实现）
+ * 生成上传凭证（使用官方 SDK）
  */
-function hmacSha1(secretKey: string, data: string): string {
-  const hmac = createHmac('sha1', secretKey);
-  hmac.update(data);
-  return hmac.digest('base64');
-}
+function generateUploadToken(accessKey: string, secretKey: string, bucket: string): string {
+  const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
 
-/**
- * 生成上传凭证
- */
-function generateUploadToken(
-  accessKey: string,
-  secretKey: string,
-  bucket: string,
-  expires: number = 3600
-): string {
-  // 1. 构造上传策略
-  const policy = {
+  const options = {
     scope: bucket,
-    deadline: Math.floor(Date.now() / 1000) + expires,
-    returnBody: JSON.stringify({
-      key: '$(key)',
-      hash: '$(etag)',
-      fsize: '$(fsize)',
-      mimeType: '$(mimeType)',
-    }),
+    expires: 3600, // 1 小时有效期
+    returnBody: '{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"mimeType":"$(mimeType)"}',
   };
 
-  // 2. 将策略 JSON 进行 Base64 编码
-  const encodedPolicy = Buffer.from(JSON.stringify(policy)).toString('base64url');
-
-  // 3. 对编码后的策略进行 HMAC-SHA1 签名
-  const sign = hmacSha1(secretKey, encodedPolicy);
-  const encodedSign = Buffer.from(sign, 'base64').toString('base64url');
-
-  // 4. 拼接上传凭证
-  return `${accessKey}:${encodedSign}:${encodedPolicy}`;
+  const putPolicy = new qiniu.rs.PutPolicy(options);
+  return putPolicy.uploadToken(mac);
 }
 
 /**
@@ -84,12 +60,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 生成上传凭证（1 小时有效期）
+    // 生成上传凭证（使用官方 SDK）
     const token = generateUploadToken(
       QINIU_ACCESS_KEY,
       QINIU_SECRET_KEY,
-      QINIU_BUCKET,
-      3600
+      QINIU_BUCKET
     );
 
     // 返回凭证
