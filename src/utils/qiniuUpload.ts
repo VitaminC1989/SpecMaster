@@ -32,7 +32,8 @@ const QINIU_CONFIG: QiniuConfig = {
   domain: import.meta.env.VITE_QINIU_DOMAIN || 'https://your-bucket.qiniucdn.com',
 
   // 存储区域（根据你的七牛空间配置）
-  region: qiniu.region.z2, // z0=华东, z1=华北, z2=华南, na0=北美, as0=东南亚
+  // 从错误信息看，你的空间在华东 z0
+  region: qiniu.region.z0, // z0=华东, z1=华北, z2=华南, na0=北美, as0=东南亚
 };
 
 /**
