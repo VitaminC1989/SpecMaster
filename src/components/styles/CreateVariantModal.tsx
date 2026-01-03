@@ -7,10 +7,10 @@
  */
 
 import React, { useState } from "react";
-import { Modal, Form, Input, message, Upload, Image } from "antd";
+import { Modal, Form, Input, message, Upload, Image, Select } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import { useCreate, useInvalidate } from "@refinedev/core";
-import type { IColorVariant } from "../../types/models";
+import { useCreate, useInvalidate, useList } from "@refinedev/core";
+import type { IColorVariant, ISize } from "../../types/models";
 import { uploadToQiniu } from "../../utils/qiniuUpload";
 
 interface CreateVariantModalProps {
@@ -34,12 +34,25 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
   // 用于刷新数据的钩子
   const invalidate = useInvalidate();
 
+  // 获取尺码基础数据供多选使用
+  const { data: sizesData, isLoading: isSizesLoading } = useList<ISize>({
+    resource: "sizes",
+    pagination: { mode: "off" },
+    sorters: [{ field: "sort_order", order: "asc" }],
+  });
+
+  const sizeOptions =
+    sizesData?.data?.map((size) => ({
+      label: size.size_code,
+      value: size.size_code,
+    })) || [];
+
   /**
    * 处理图片上传（使用七牛云）
    */
   const handleImageChange = async (info: any) => {
     // 只处理新选择的文件，避免重复上传
-    if (info.file.status === 'removed') {
+    if (info.file.status === "removed") {
       setImageUrl("");
       setUploading(false);
       return;
@@ -82,7 +95,10 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
         const newVariant: Omit<IColorVariant, "id"> = {
           style_id: styleId,
           color_name: values.color_name,
-          size_range: values.size_range || "",
+          // 将多选数组转换为 S/M/L 格式的字符串
+          size_range: Array.isArray(values.size_range)
+            ? values.size_range.join("/")
+            : values.size_range || "",
           // 使用上传的图片，如果没有则为空（不使用默认图）
           sample_image_url: imageUrl || "",
         };
@@ -141,8 +157,7 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
     <Modal
       title={
         <div className="text-lg">
-          <span className="mr-2">🎨</span>
-          新建颜色版本
+          <span className="mr-2">🎨</span>新建颜色版本
         </div>
       }
       open={open}
@@ -152,13 +167,16 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
       okText="创建"
       cancelText="取消"
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <div className="py-4">
         <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
           <p className="text-sm text-gray-700 m-0">
-            💡 <strong>提示：</strong>创建颜色版本后，您可以为其添加配料明细和规格数据。
-            也可以使用"复制版本"功能快速创建相似颜色。
+            💡 <strong>提示：</strong>
+            <span>
+              创建颜色版本后，您可以为其添加配料明细和规格数据。
+              也可以使用"复制版本"功能快速创建相似颜色。
+            </span>
           </p>
         </div>
 
@@ -180,17 +198,20 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
             />
           </Form.Item>
 
-          {/* 尺码范围字段（可选）*/}
+          {/* 尺码范围字段（多选）*/}
           <Form.Item
             label="尺码范围"
             name="size_range"
-            rules={[{ max: 30, message: "尺码范围不能超过 30 个字符" }]}
-            tooltip="该颜色版本的尺码说明"
+            tooltip="选择该颜色版本包含的尺码范围"
           >
-            <Input
-              placeholder="如：S/M/L/XL, 90-130cm"
-              maxLength={30}
+            <Select
+              mode="multiple"
+              placeholder="请选择尺码（可多选）"
               size="large"
+              loading={isSizesLoading}
+              options={sizeOptions}
+              allowClear
+              className="w-full"
             />
           </Form.Item>
 
@@ -207,12 +228,18 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
               showUploadList={false} // 隐藏默认的文件列表，使用自定义显示
             >
               {imageUrl ? (
-                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                <div
+                  style={{
+                    position: "relative",
+                    width: "100%",
+                    height: "100%",
+                  }}
+                >
                   <Image
                     src={imageUrl}
                     width={100}
                     height={100}
-                    style={{ objectFit: 'cover' }}
+                    style={{ objectFit: "cover" }}
                     preview={true}
                   />
                 </div>
@@ -241,4 +268,3 @@ export const CreateVariantModal: React.FC<CreateVariantModalProps> = ({
     </Modal>
   );
 };
-
